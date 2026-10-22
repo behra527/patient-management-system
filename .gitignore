@@ -37,3 +37,6 @@ frontend/backups/
 
 # Large demo video
 Patient management system.mp4
+
+# Temporary API backups
+frontend/src/lib/api.ts.backup-*
