@@ -7,19 +7,20 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white)
 ![Pytest](https://img.shields.io/badge/Pytest-Testing-0A9EDC?logo=pytest&logoColor=white)
-![JWT](https://img.shields.io/badge/Auth-JWT-black?logo=jsonwebtokens&logoColor=white)
+![JWT](https://img.shields.io/badge/Authentication-JWT-black?logo=jsonwebtokens&logoColor=white)
 
-A full-stack clinic management application built with FastAPI, Next.js, React, TypeScript, and SQLite. The project brings together patient records, doctor management, appointments, billing, invoices, payments, authentication, and patient health metrics through a REST API.
+A full-stack clinic management application built with FastAPI, Next.js, React, TypeScript, and SQLite. It provides a foundation for managing patient records, doctors, appointments, invoices, billing, payments, authentication, and patient health metrics.
 
 ## Table of Contents
 
 - [Project Overview](#project-overview)
 - [Features and Modules](#features-and-modules)
 - [Technology Stack](#technology-stack)
+- [System Architecture](#system-architecture)
 - [Database Schema Diagram](#database-schema-diagram)
 - [Project Structure](#project-structure)
 - [Installation and Setup](#installation-and-setup)
-- [API Endpoints](#api-endpoints)
+- [API Documentation](#api-documentation)
 - [Patient Vitals API](#patient-vitals-api)
 - [Testing](#testing)
 - [Development Workflow](#development-workflow)
@@ -28,91 +29,95 @@ A full-stack clinic management application built with FastAPI, Next.js, React, T
 
 ## Project Overview
 
-The Patient Management System is designed to organize common clinic operations in one application. It addresses the need to manage patient information, doctors, appointments, billing records, payments, and health measurements through a structured backend and web interface.
+The Patient Management System is designed to organize common clinic operations through a web application and REST API.
 
-The backend is developed using FastAPI and follows a layered, MVC-inspired code organization. Controllers handle HTTP requests, schemas validate data, services implement business rules, and repositories manage data access.
+The backend uses FastAPI and a layered architecture inspired by MVC. It separates request handling, validation, business logic, data access, and database operations.
 
-The Next.js frontend provides the user interface and communicates with the backend through HTTP requests.
+The frontend is built with Next.js, React, and TypeScript. It provides reusable components and interfaces for patient management and other clinic workflows.
 
-The project also includes a patient vitals API for accepting, validating, storing, retrieving, and summarizing health measurements.
+The project also includes a patient health metrics API designed to receive, validate, store, retrieve, and summarize vital measurements.
 
 ## Features and Modules
 
 ### 1. Patient Management
 
-- Create and manage patient records.
-- Retrieve patient details.
-- Update and delete patient information.
-- Search and filter the patient directory.
+- Create, retrieve, update, and delete patient records.
+- Search and filter patient information.
 - Paginate patient lists.
-- Export patient records to CSV.
+- View patient details.
+- Export patient data to CSV.
+- Connect the frontend patient directory to the backend API.
 
 ### 2. Doctor Management
 
-- Manage doctor information.
-- Store doctor names and professional details.
-- Organize doctor records for clinic operations.
-- Provide a foundation for linking doctors to appointments.
+- Manage doctor profile information.
+- Store names, specialties, email addresses, phone numbers, and professional details where supported.
+- Support doctor directory and profile interfaces.
+- Provide a foundation for associating doctors with appointments.
 
 ### 3. Appointment Management
 
-- Create and retrieve appointments.
-- Associate appointments with relevant patient and doctor records where supported.
-- Manage appointment information and status.
-- Support appointment-related API workflows.
+- Organize appointment information.
+- Provide appointment forms, lists, filters, and status components.
+- Include calendar-related frontend components.
+- Support patient and doctor appointment workflows where backend integration is available.
 
-### 4. Billing and Invoices
+### 4. Medical Records
 
-- Manage billing-related information.
-- Create and retrieve invoice records.
-- Associate invoices with patients where supported.
-- Organize invoice information for clinic financial workflows.
+- Provide medical record list and form components.
+- Organize patient medical history.
+- Provide a foundation for managing clinical information.
 
-### 5. Payments
+### 5. Prescriptions
 
-- Manage payment records.
-- Store payment-related information.
-- Support invoice and payment workflows.
-- Provide a foundation for tracking payment status.
+- Provide prescription list, form, and details components.
+- Include medication list components.
+- Support future integration with patient medical records.
 
-### 6. Patient Vitals and Health Metrics
+### 6. Billing and Invoices
 
-- Check API health and service status.
+- Organize billing information.
+- Provide invoice forms, invoice lists, and invoice details.
+- Include billing summary components.
+- Support patient-related invoice workflows where implemented.
+
+### 7. Payments
+
+- Provide payment-related functionality and UI components.
+- Organize payment information associated with invoices where supported.
+- Support future expansion of payment tracking and reconciliation.
+
+### 8. Patient Vitals and Health Metrics
+
+- Provide a health-check endpoint.
 - Accept patient vital measurements.
 - Validate patient IDs, age, blood pressure, and glucose values.
-- Store valid health records.
-- Retrieve a patient's historical vitals.
-- Calculate average blood pressure and glucose measurements.
-- Return the total number of records in a patient's summary.
+- Store valid measurements.
+- Retrieve historical vital records by patient ID.
+- Calculate average systolic and diastolic blood pressure.
+- Calculate average glucose level and total record count.
 
-### 7. Authentication and Authorization
+### 9. Authentication and Authorization
 
-- JWT-based login authentication.
+- JWT-based authentication.
 - Password hashing using Argon2.
 - Role-based access for admin, doctor, and receptionist.
 - Protected API endpoints.
-- Environment-based configuration for secrets and application settings.
+- Environment-based application configuration.
 
-### 8. Additional Frontend Components
+### 10. Dashboard and Analytics
 
-The frontend component structure also includes the following clinic-related areas:
+- Dashboard and statistics components.
+- Analytics and reporting component structures.
+- Foundation for presenting clinic metrics and operational reports.
 
-| Module | Component responsibilities |
-|---|---|
-| Dashboard and Analytics | Overview cards, metrics, and reports |
-| Doctors | Doctor list, form, profile, and availability |
-| Appointments | Appointment list, form, filters, status, and calendar |
-| Medical Records | Record list, forms, and medical history |
-| Prescriptions | Prescription list, form, details, and medication list |
-| Billing | Billing summary and invoice screens |
-| Payments | Payment form and related payment workflows |
-| Laboratory | Laboratory-related interface components |
-| Pharmacy | Pharmacy-related interface components |
-| Layout | Sidebar, header, and shared application UI |
-| Patients | Patient directory, form, details, filters, and pagination |
-| Authentication | Login and session-related UI |
+### 11. Laboratory and Pharmacy
 
-**Implementation note:** Backend API modules have been manually exercised, including patient, doctor, vitals, authentication, appointments, billing/invoices, and payments. Additional frontend components should not be assumed to have complete backend integration unless their end-to-end workflows have been verified.
+- Laboratory-related frontend component structures.
+- Pharmacy-related frontend component structures.
+- Foundation for future clinical workflow integration.
+
+> **Implementation status:** The project contains existing backend functionality and additional frontend component structures. A component folder does not automatically mean its module is fully integrated with the backend. Verify each module's routes, database operations, and end-to-end workflow before describing it as production-ready.
 
 ## Technology Stack
 
@@ -120,23 +125,88 @@ The frontend component structure also includes the following clinic-related area
 |---|---|
 | Python | Backend programming |
 | FastAPI | REST API development |
-| Pydantic | Request and data validation |
-| SQLite | Relational database |
-| Uvicorn | ASGI server |
+| Pydantic | Request validation and schemas |
+| SQLite | Relational data storage |
+| Uvicorn | ASGI application server |
 | Pytest | Automated testing |
 | HTTPX | HTTP testing where configured |
-| JWT | Token-based authentication |
-| pwdlib / Argon2 | Password hashing |
-| python-dotenv | Environment variable loading |
+| JWT | Authentication tokens |
+| pwdlib with Argon2 | Password hashing |
+| python-dotenv | Environment configuration |
 | Next.js | Frontend framework |
-| React | User interface |
+| React | UI components |
 | TypeScript | Type-safe frontend development |
 | Tailwind CSS | Frontend styling |
-| Git and GitHub | Version control and collaboration |
+| Git and GitHub | Version control |
+
+## System Architecture
+
+The system uses a layered structure to separate the user interface, API request handling, authentication, validation, business logic, database access, and testing.
+
+```mermaid
+flowchart TD
+    USER["Clinic Staff / Users"]
+
+    subgraph FRONTEND["Frontend Layer"]
+        UI["Next.js + React + TypeScript"]
+        COMPONENTS["Patients · Doctors · Appointments<br/>Medical Records · Prescriptions<br/>Billing · Vitals · Dashboard"]
+        UI --- COMPONENTS
+    end
+
+    subgraph BACKEND["FastAPI Backend"]
+        API["FastAPI Application"]
+        AUTH["Authentication and Authorization<br/>JWT + Roles"]
+        SCHEMA["Pydantic Schemas<br/>Request Validation"]
+        CONTROLLER["Controllers<br/>HTTP Request Handling"]
+        SERVICE["Services<br/>Business Logic"]
+        REPOSITORY["Repositories<br/>Data Access"]
+    end
+
+    subgraph DATABASE["Data Layer"]
+        DB[("SQLite Database")]
+        MODELS["Data Models<br/>Patient · Doctor · Appointment<br/>Invoice · Payment · Vitals · User"]
+        DB --- MODELS
+    end
+
+    TESTS["Automated Tests<br/>Pytest / HTTPX"]
+
+    USER --> UI
+    COMPONENTS -->|"HTTP Requests / JSON"| API
+    API --> AUTH
+    AUTH --> SCHEMA
+    SCHEMA --> CONTROLLER
+    CONTROLLER --> SERVICE
+    SERVICE --> REPOSITORY
+    REPOSITORY <--> DB
+    TESTS -.-> API
+    TESTS -.-> SERVICE
+```
+
+### Architecture Components
+
+**Frontend:** Provides screens and reusable components for clinic staff.
+
+**FastAPI application:** Exposes HTTP endpoints and routes incoming requests.
+
+**Authentication and authorization:** Verifies tokens and permissions for protected endpoints.
+
+**Schemas:** Validate request data and define data structures.
+
+**Controllers:** Handle HTTP requests and API responses.
+
+**Services:** Contain application rules and coordinate operations.
+
+**Repositories:** Handle database queries and persistence.
+
+**SQLite database:** Stores application records.
+
+**Automated tests:** Check API behavior and application logic.
+
+The diagram describes the intended organization of the application. Individual endpoints may use a different request flow depending on their implementation.
 
 ## Database Schema Diagram
 
-The following ER diagram shows the main logical entities of the clinic system and their intended relationships.
+The following ER diagram illustrates the principal entities and their logical relationships in the clinic system.
 
 ```mermaid
 erDiagram
@@ -144,7 +214,7 @@ erDiagram
     DOCTOR ||--o{ APPOINTMENT : attends
     PATIENT ||--o{ VITAL_RECORD : has
     PATIENT ||--o{ INVOICE : receives
-    INVOICE ||--o{ PAYMENT : has
+    INVOICE ||--o{ PAYMENT : includes
 
     PATIENT {
         int id PK
@@ -206,19 +276,23 @@ erDiagram
     }
 ```
 
-### Entity Descriptions
+### Database Entity Overview
 
-- **Patient:** Stores patient demographic and contact information.
-- **Doctor:** Stores doctor profile and professional information.
-- **Appointment:** Represents a scheduled patient visit and its doctor association.
-- **Vital Record:** Stores a patient's blood pressure, glucose level, age, and measurement timestamp.
-- **Invoice:** Represents a billing document associated with a patient.
-- **Payment:** Records payment information associated with an invoice.
-- **User:** Represents an authenticated application account and its access role.
+| Entity | Purpose |
+|---|---|
+| Patient | Stores patient information |
+| Doctor | Stores doctor profile information |
+| Appointment | Represents a scheduled clinic visit |
+| Vital Record | Stores patient health measurements |
+| Invoice | Represents billing information |
+| Payment | Records payments related to invoices |
+| User | Represents an authenticated application account |
 
-The diagram represents the logical data model, not a guarantee that every displayed field, foreign-key constraint, or relationship exactly matches the current SQLite schema. The actual model and migration definitions should be treated as the source of truth. The `USER` entity is included to document authentication conceptually.
+**Important:** This is a logical schema diagram. Field names, primary keys, foreign keys, and relationships must match the actual model definitions and database schema. For example, the vitals API may identify a patient using a string `patient_id`, while the main patient table may use an integer ID. Confirm how these identifiers are connected in the actual implementation.
 
 ## Project Structure
+
+The following is a high-level overview of the repository. Update it if any directory names differ from the actual files.
 
 ```text
 fastapi-patient-management-system/
@@ -226,16 +300,13 @@ fastapi-patient-management-system/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
-│   │   │
 │   │   ├── auth/
 │   │   │   ├── security.py
 │   │   │   └── dependencies.py
-│   │   │
 │   │   ├── core/
 │   │   │   ├── config.py
 │   │   │   └── database/
 │   │   │       └── connection.py
-│   │   │
 │   │   ├── database/
 │   │   ├── models/
 │   │   ├── schemas/
@@ -244,7 +315,6 @@ fastapi-patient-management-system/
 │   │   ├── controllers/
 │   │   └── scripts/
 │   │       └── create_admin.py
-│   │
 │   ├── requirements.txt
 │   └── .env
 │
@@ -272,7 +342,18 @@ fastapi-patient-management-system/
 └── README.md
 ```
 
-The structure above is a directory overview. Some folders may contain additional files, and exact names should be aligned with the repository's current contents.
+### Backend Layer Responsibilities
+
+- `main.py`: Creates the FastAPI application and registers routes.
+- `auth/`: Contains authentication and authorization logic.
+- `core/`: Contains application configuration and database connection setup.
+- `models/` and `database/`: Organize data models and database-related code.
+- `schemas/`: Define request and response data structures.
+- `controllers/`: Handle API endpoints.
+- `services/`: Implement business logic.
+- `repositories/`: Handle database access.
+- `scripts/`: Contains utility scripts, such as creating an administrator account.
+- `tests/`: Contains automated tests.
 
 ## Installation and Setup
 
@@ -291,28 +372,28 @@ cd fastapi-patient-management-system
 
 ### 2. Set Up the Backend
 
-Create and activate a virtual environment on Windows PowerShell:
+Create and activate a virtual environment using Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install dependencies:
+Install backend dependencies:
 
 ```powershell
 python -m pip install -r .\backend\requirements.txt
 ```
 
-Configure the required environment variables in `backend/.env`. Use a secure JWT secret and do not commit real secrets to GitHub.
+Configure the required environment variables in `backend/.env`. Use a secure JWT secret and do not commit real credentials.
 
-Start the API from the repository root:
+Start the backend from the repository root:
 
 ```powershell
 python -m uvicorn app.main:app --app-dir .\backend --reload
 ```
 
-Backend base URL:
+The API should be available at:
 
 `http://127.0.0.1:8000`
 
@@ -325,7 +406,7 @@ cd frontend
 npm install
 ```
 
-Configure the frontend API URL using the environment variable expected by `src/lib/api.ts`. For example, if the frontend uses `NEXT_PUBLIC_API_URL`:
+Configure the API base URL using the environment variable expected by `frontend/src/lib/api.ts`. For example, if the frontend uses `NEXT_PUBLIC_API_URL`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
@@ -341,34 +422,55 @@ Open:
 
 `http://localhost:3000`
 
-## API Endpoints
+## API Documentation
 
-The following health-metrics routes describe the required API contract. Check the live Swagger documentation for the exact routes registered in the current build.
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/health` | Health status and UTC timestamp |
-| POST | `/vitals` | Submit and validate patient vitals |
-| GET | `/patients/{patient_id}/vitals` | Retrieve patient vitals history |
-| GET | `/patients/{patient_id}/summary` | Summarize patient health metrics |
-
-The system also provides patient, doctor, appointment, invoice, payment, and authentication API functionality. Consult Swagger UI for the exact route paths and request schemas.
-
-### Interactive API Documentation
+FastAPI provides interactive API documentation:
 
 - Swagger UI: http://127.0.0.1:8000/docs
 - ReDoc: http://127.0.0.1:8000/redoc
 
+Use Swagger UI to inspect the routes, request schemas, response formats, and available operations in the running application.
+
 ## Patient Vitals API
 
-### Submit Vitals
+The health-metrics API is intended to receive, validate, store, and summarize patient vital measurements.
 
-Example request:
+### Endpoint Summary
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Return service status and UTC timestamp |
+| POST | `/vitals` | Submit a patient vital record |
+| GET | `/patients/{patient_id}/vitals` | Retrieve historical vital records |
+| GET | `/patients/{patient_id}/summary` | Summarize patient health metrics |
+
+Check Swagger UI to confirm the routes are registered in the current build.
+
+### 1. Health Check
+
+```http
+GET /health
+```
+
+Example response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-10-22T00:00:00Z"
+}
+```
+
+The timestamp is illustrative; the API should return the actual current UTC timestamp.
+
+### 2. Submit Patient Vitals
 
 ```http
 POST /vitals
 Content-Type: application/json
 ```
+
+Example request:
 
 ```json
 {
@@ -384,31 +486,38 @@ Content-Type: application/json
 
 ### Validation Rules
 
-| Field | Requirement |
+| Field | Validation |
 |---|---|
 | `patient_id` | Required, non-empty string |
-| `age` | Integer between 0 and 120 |
-| `blood_pressure.systolic` | Integer between 50 and 300 |
-| `blood_pressure.diastolic` | Integer between 30 and 200 |
+| `age` | Integer from 0 to 120 |
+| `blood_pressure.systolic` | Integer from 50 to 300 |
+| `blood_pressure.diastolic` | Integer from 30 to 200 |
 | `glucose_level` | Numeric value greater than zero |
 
-Invalid values should return descriptive HTTP `400 Bad Request` responses according to the task specification. Confirm that the current validation handler converts framework validation errors to HTTP 400 where required.
+Invalid submissions should return descriptive HTTP `400 Bad Request` responses according to the task requirements. Verify that the application handles both custom validation failures and framework-generated request validation errors as required.
 
-### Retrieve Vitals History
+### 3. Retrieve Patient Vitals
 
 ```http
 GET /patients/P1001/vitals?limit=10
 ```
 
-Returns historical records for the selected patient, subject to the API's implemented response format and limit handling.
+This endpoint is intended to return historical measurements for the selected patient. The optional `limit` parameter controls how many records are returned.
 
-### Retrieve Patient Summary
+### 4. Retrieve Patient Summary
 
 ```http
 GET /patients/P1001/summary
 ```
 
-The intended summary includes average systolic pressure, average diastolic pressure, average glucose level, and total record count.
+The intended summary includes:
+
+- Average systolic blood pressure.
+- Average diastolic blood pressure.
+- Average glucose level.
+- Total number of stored records.
+
+The response format and behavior for a patient with no records should follow the implemented API contract.
 
 ## Testing
 
@@ -418,42 +527,43 @@ Run the backend tests from the repository root:
 python -m pytest .\backend -v
 ```
 
-Test cases should cover:
+If tests also exist in the root `tests/` directory, include that directory in the command or run it separately.
 
-- Valid requests and stored records.
-- Missing and empty patient IDs.
-- Age and blood-pressure boundary violations.
+### Recommended Test Coverage
+
+- Valid patient and vitals submissions.
+- Missing or empty patient IDs.
+- Age outside the allowed range.
+- Systolic and diastolic values outside their allowed ranges.
 - Invalid glucose values.
 - Incorrect JSON data types.
 - Vitals history retrieval.
-- Summary averages and record counts.
-- Patient, doctor, appointment, invoice, and payment workflows.
+- Summary calculations and record counts.
+- Patient and doctor operations.
+- Appointment, invoice, and payment workflows.
 - Authentication and role-based access.
-- Database and API error handling.
+- Database operations and error handling.
 
-Only report the latest test count after running the current test suite.
+Publish a test count or coverage percentage only after running the current code and obtaining the actual result.
 
 ## Development Workflow
 
-1. Define requirements and endpoint contracts.
-2. Create schemas and validation rules.
-3. Implement controllers and service logic.
+1. Define the requirements and API contract.
+2. Create data schemas and validation rules.
+3. Implement controllers and services.
 4. Add repository and database operations.
-5. Connect frontend components to the API.
+5. Connect frontend components to backend endpoints.
 6. Write unit and integration tests.
-7. Verify API behavior using Swagger UI.
-8. Track changes using Git and GitHub.
+7. Verify endpoints through Swagger UI.
+8. Commit and push changes using Git.
 
 ## Future Improvements
 
-- Complete integration of remaining frontend modules.
+- Complete remaining frontend-to-backend integrations.
 - Expand appointment scheduling and calendar workflows.
-- Improve medical history and prescription management.
-- Add detailed billing reports and payment reconciliation.
-- Strengthen database relationships and migration management.
-- Add CI workflows with GitHub Actions.
+- Complete medical records and prescription workflows.
+- Improve billing reports and payment reconciliation.
+- Add database migrations and stronger relational constraints.
+- Add continuous integration with GitHub Actions.
 - Prepare secure deployment and production configuration.
 
-
-
-This project is intended for software engineering practice. Production use with real patient data requires appropriate security, privacy, access controls, backup procedures, and compliance review.
