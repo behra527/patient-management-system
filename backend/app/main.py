@@ -1,12 +1,16 @@
-
+﻿
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.controllers.billing_controller import router as billing_router
 from app.controllers.auth_controller import router as auth_router
+from app.controllers.appointment_controller import router as appointment_router
+from app.controllers.doctor_controller import router as doctor_router
 from app.controllers.patient_controller import router as patient_router
+from app.controllers.vitals_controller import router as vitals_router
 from app.database.connection import initialize_database
 
 
@@ -37,7 +41,11 @@ app.add_middleware(
 
 # Register API routers.
 app.include_router(patient_router)
+app.include_router(doctor_router)
+app.include_router(vitals_router)
 app.include_router(auth_router)
+app.include_router(appointment_router)
+app.include_router(billing_router)
 
 
 @app.get("/", tags=["Health"])

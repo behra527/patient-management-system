@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AppSidebar from "@/components/layout/AppSidebar";
 import AppHeader from "@/components/layout/AppHeader";
@@ -8,9 +8,26 @@ import PatientPagination from "@/components/patients/PatientPagination";
 import PatientTable from "@/components/patients/PatientTable";
 import PatientDetailsModal from "@/components/patients/PatientDetailsModal";
 import PatientForm from "@/components/patients/PatientForm";
+import AppointmentForm from "@/components/appointments/AppointmentForm";
+import AppointmentList from "@/components/appointments/AppointmentList";
+import AppointmentFilters from "@/components/appointments/AppointmentFilters";
+import BillingSummary from "@/components/billing/BillingSummary";
+import InvoiceForm from "@/components/billing/InvoiceForm";
+import InvoiceList from "@/components/billing/InvoiceList";
+import InvoiceDetails from "@/components/billing/InvoiceDetails";
+import PaymentForm from "@/components/billing/PaymentForm";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createPatient,
+  getAppointments,
+  createAppointment,
+  updateAppointmentStatus,
+  getDoctors,
+  type Appointment,
+  type AppointmentStatus,
+  type AppointmentPayload,
+  type Doctor,
   deletePatient as deletePatientRecord,
   getPatients,
   login,
@@ -19,9 +36,20 @@ import {
   updatePatient,
   type Patient,
   type PatientPayload,
+  getInvoices,
+  createInvoice,
+  getInvoiceDetails,
+  recordInvoicePayment,
+  type Invoice,
+  type InvoiceDetail,
+  type InvoiceStatus,
+  type InvoicePayload,
+  type PaymentPayload,
 } from "@/lib/api";
 
 export default function Home() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
   const [loginUsername, setLoginUsername] = useState("");
@@ -30,6 +58,25 @@ export default function Home() {
   const [loginError, setLoginError] = useState("");
 
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [appointmentStatus, setAppointmentStatus] = useState<AppointmentStatus | "">("");
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [appointmentSaving, setAppointmentSaving] = useState(false);
+  const [appointmentError, setAppointmentError] = useState("");
+  const [updatingAppointmentId, setUpdatingAppointmentId] = useState<number | null>(null);
+
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoiceStatus, setInvoiceStatus] = useState<InvoiceStatus | "">("");
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoiceSaving, setInvoiceSaving] = useState(false);
+  const [invoiceError, setInvoiceError] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
+  const [invoiceDetailsLoading, setInvoiceDetailsLoading] = useState(false);
+  const [invoiceDetailsError, setInvoiceDetailsError] = useState("");
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
   const [search, setSearch] = useState("");
   const [genderFilter, setGenderFilter] = useState<string>("All");
   const [showForm, setShowForm] = useState(false);
@@ -185,6 +232,197 @@ export default function Home() {
     };
   }, [isAuthenticated]);
 
+
+  // Appointments section integration
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let cancelled = false;
+
+    async function loadAppointmentData() {
+      setAppointmentsLoading(true);
+      setAppointmentError("");
+
+      try {
+        const [appointmentData, doctorData] = await Promise.all([
+          getAppointments(),
+          getDoctors(),
+        ]);
+
+        if (!cancelled) {
+          setAppointments(appointmentData);
+          setDoctors(doctorData);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAppointmentError(
+            err instanceof Error ? err.message : "Unable to load appointments.",
+          );
+        }
+      } finally {
+        if (!cancelled) setAppointmentsLoading(false);
+      }
+    }
+
+    void loadAppointmentData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const visibleAppointments = useMemo(
+    () => appointmentStatus
+      ? appointments.filter((appointment) => appointment.status === appointmentStatus)
+      : appointments,
+    [appointments, appointmentStatus],
+  );
+
+  async function saveAppointment(payload: AppointmentPayload): Promise<void> {
+    setAppointmentSaving(true);
+    setAppointmentError("");
+
+    try {
+      const created = await createAppointment(payload);
+      setAppointments((current) =>
+        [...current, created].sort((a, b) =>
+          `${a.appointment_date}T${a.appointment_time}`.localeCompare(
+            `${b.appointment_date}T${b.appointment_time}`,
+          ),
+        ),
+      );
+      showNotification("Appointment created successfully.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to create appointment.";
+      setAppointmentError(message);
+      showNotification(message, "error");
+      throw err;
+    } finally {
+      setAppointmentSaving(false);
+    }
+  }
+
+  async function changeAppointmentStatus(
+    id: number,
+    status: AppointmentStatus,
+  ): Promise<void> {
+    setUpdatingAppointmentId(id);
+    setAppointmentError("");
+
+    try {
+      const updated = await updateAppointmentStatus(id, status);
+      setAppointments((current) =>
+        current.map((appointment) => appointment.id === id ? updated : appointment),
+      );
+      showNotification(`Appointment APT-${id} marked ${status.toLowerCase()}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update appointment.";
+      setAppointmentError(message);
+      showNotification(message, "error");
+    } finally {
+      setUpdatingAppointmentId(null);
+    }
+  }
+
+  // Billing: load invoices using the selected status filter.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let cancelled = false;
+
+    async function loadInvoices() {
+      setInvoicesLoading(true);
+      setInvoiceError("");
+
+      try {
+        const data = await getInvoices(
+          invoiceStatus ? { status: invoiceStatus } : {},
+        );
+        if (!cancelled) setInvoices(data);
+      } catch (err) {
+        if (!cancelled) {
+          setInvoiceError(
+            err instanceof Error ? err.message : "Unable to load invoices.",
+          );
+        }
+      } finally {
+        if (!cancelled) setInvoicesLoading(false);
+      }
+    }
+
+    void loadInvoices();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, invoiceStatus]);
+
+  async function saveInvoice(payload: InvoicePayload): Promise<void> {
+    setInvoiceSaving(true);
+    setInvoiceError("");
+
+    try {
+      await createInvoice(payload);
+      const data = await getInvoices(
+        invoiceStatus ? { status: invoiceStatus } : {},
+      );
+      setInvoices(data);
+      showNotification("Invoice created successfully.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to create invoice.";
+      setInvoiceError(message);
+      showNotification(message, "error");
+      throw err;
+    } finally {
+      setInvoiceSaving(false);
+    }
+  }
+
+  async function openInvoiceDetails(invoice: Invoice): Promise<void> {
+    setSelectedInvoice(null);
+    setInvoiceDetailsLoading(true);
+    setInvoiceDetailsError("");
+    setShowPaymentForm(false);
+    setPaymentError("");
+
+    try {
+      setSelectedInvoice(await getInvoiceDetails(invoice.id));
+    } catch (err) {
+      setInvoiceDetailsError(
+        err instanceof Error ? err.message : "Unable to load invoice details.",
+      );
+    } finally {
+      setInvoiceDetailsLoading(false);
+    }
+  }
+
+  async function saveInvoicePayment(
+    invoiceId: number,
+    payload: PaymentPayload,
+  ): Promise<void> {
+    setPaymentSaving(true);
+    setPaymentError("");
+
+    try {
+      await recordInvoicePayment(invoiceId, payload);
+
+      const [invoiceData, details] = await Promise.all([
+        getInvoices(invoiceStatus ? { status: invoiceStatus } : {}),
+        getInvoiceDetails(invoiceId),
+      ]);
+
+      setInvoices(invoiceData);
+      setSelectedInvoice(details);
+      setShowPaymentForm(false);
+      showNotification("Payment recorded successfully.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to record payment.";
+      setPaymentError(message);
+      showNotification(message, "error");
+      throw err;
+    } finally {
+      setPaymentSaving(false);
+    }
+  }
   const filteredPatients = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -486,18 +724,16 @@ export default function Home() {
               fontWeight: "bold",
             }}
           >
-            {toast.type === "success" ? "✓" : "!"}
+            {toast.type === "success" ? "âœ“" : "!"}
           </span>
           {toast.message}
         </div>
       )}
 
       <AppSidebar
-        onNavigateToPatients={() =>
-          document
-            .getElementById("patient-records")
-            ?.scrollIntoView({ behavior: "smooth" })
-        }
+        onNavigateToBilling={() => router.push("/billing")}
+        onNavigateToAppointments={() => router.push("/appointments")}
+        onNavigateToPatients={() => router.push("/patients")}
       />
 
       <main className="main-content">
@@ -508,6 +744,7 @@ export default function Home() {
         />
 
         <section className="page-content">
+{pathname === "/patients" && (
           <div className="page-heading">
             <div>
               <div
@@ -612,6 +849,7 @@ export default function Home() {
               </button>
             </div>
           </div>
+          )}
 
           {error && (
             <div
@@ -643,6 +881,205 @@ export default function Home() {
             </div>
           )}
 
+          {pathname === "/" && (
+            <section style={{ marginBottom: "24px" }}>
+              <div style={{ marginBottom: "22px" }}>
+                <p style={{ color: "#0284c7", fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", margin: "0 0 6px" }}>
+                  CLINICAL WORKSPACE
+                </p>
+                <h1 style={{ color: "#0f172a", fontSize: "28px", fontWeight: 750, margin: 0 }}>
+                  Dashboard Overview
+                </h1>
+                <p style={{ color: "#64748b", fontSize: "14px", margin: "8px 0 0" }}>
+                  Monitor clinic activity, patient records, appointments, and billing.
+                </p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+                <article style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px", boxShadow: "0 2px 8px rgba(15,23,42,0.03)" }}>
+                  <p style={{ color: "#64748b", fontSize: "13px", fontWeight: 600, margin: 0 }}>Total Patients</p>
+                  <p style={{ color: "#0f172a", fontSize: "30px", fontWeight: 750, margin: "12px 0 5px" }}>{loading ? "—" : patients.length}</p>
+                  <p style={{ color: "#64748b", fontSize: "12px", margin: 0 }}>Registered patient records</p>
+                </article>
+                <article style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px", boxShadow: "0 2px 8px rgba(15,23,42,0.03)" }}>
+                  <p style={{ color: "#64748b", fontSize: "13px", fontWeight: 600, margin: 0 }}>Appointments</p>
+                  <p style={{ color: "#0f172a", fontSize: "30px", fontWeight: 750, margin: "12px 0 5px" }}>{appointmentsLoading ? "—" : appointments.length}</p>
+                  <p style={{ color: "#64748b", fontSize: "12px", margin: 0 }}>Available appointment records</p>
+                </article>
+                <article style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px", boxShadow: "0 2px 8px rgba(15,23,42,0.03)" }}>
+                  <p style={{ color: "#64748b", fontSize: "13px", fontWeight: 600, margin: 0 }}>Invoices</p>
+                  <p style={{ color: "#0f172a", fontSize: "30px", fontWeight: 750, margin: "12px 0 5px" }}>{invoicesLoading ? "—" : invoices.length}</p>
+                  <p style={{ color: "#64748b", fontSize: "12px", margin: 0 }}>Recorded clinic invoices</p>
+                </article>
+                <article style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px", boxShadow: "0 2px 8px rgba(15,23,42,0.03)" }}>
+                  <p style={{ color: "#64748b", fontSize: "13px", fontWeight: 600, margin: 0 }}>Unpaid Invoices</p>
+                  <p style={{ color: "#b45309", fontSize: "30px", fontWeight: 750, margin: "12px 0 5px" }}>{invoicesLoading ? "—" : invoices.filter((invoice) => invoice.status === "Unpaid" || invoice.status === "Partially Paid").length}</p>
+                  <p style={{ color: "#64748b", fontSize: "12px", margin: 0 }}>Require payment follow-up</p>
+                </article>
+              </div>
+
+                            {/* CLINIC_DEMOGRAPHICS_CHART */}
+              <section className="dashboard-analytics">
+                <div className="dashboard-chart-panel">
+                  <div className="dashboard-chart-heading">
+                    <div>
+                      <p className="dashboard-chart-eyebrow">PATIENT ANALYTICS</p>
+                      <h2>Patient demographics</h2>
+                      <p>Distribution of registered patients by gender.</p>
+                    </div>
+                    <span className="dashboard-live-tag">
+                      <span /> Live data
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const male = patients.filter((patient) => patient.gender === "Male").length;
+                    const female = patients.filter((patient) => patient.gender === "Female").length;
+                    const other = patients.filter((patient) => patient.gender === "Other").length;
+                    const total = male + female + other;
+                    const maxValue = Math.max(male, female, other, 1);
+
+                    const items = [
+                      { label: "Male", value: male, color: "#1685c5" },
+                      { label: "Female", value: female, color: "#8b7bea" },
+                      { label: "Other", value: other, color: "#19a58a" },
+                    ];
+
+                    return (
+                      <>
+                        <div className="dashboard-chart-total">
+                          <strong>{loading ? "—" : total}</strong>
+                          <span>patients represented</span>
+                        </div>
+
+                        <div
+                          className="dashboard-bar-chart"
+                          role="img"
+                          aria-label={`Patient demographics: ${male} male, ${female} female, ${other} other`}
+                        >
+                          {items.map((item) => (
+                            <div className="dashboard-bar-row" key={item.label}>
+                              <div className="dashboard-bar-label">
+                                <span>{item.label}</span>
+                                <strong>{loading ? "—" : item.value}</strong>
+                              </div>
+                              <div className="dashboard-bar-track">
+                                <div
+                                  className="dashboard-bar-fill"
+                                  style={{
+                                    width: loading ? "0%" : `${(item.value / maxValue) * 100}%`,
+                                    background: item.color,
+                                  }}
+                                />
+                              </div>
+                              <span className="dashboard-bar-percent">
+                                {loading || total === 0
+                                  ? "—"
+                                  : `${Math.round((item.value / total) * 100)}%`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {!loading && total === 0 && (
+                          <p className="dashboard-chart-empty">
+                            Register patients to see demographic insights.
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="dashboard-insights-panel">
+                  <div className="dashboard-chart-heading">
+                    <div>
+                      <p className="dashboard-chart-eyebrow">CLINIC ACTIVITY</p>
+                      <h2>Records overview</h2>
+                      <p>Current records available in the system.</p>
+                    </div>
+                  </div>
+
+                  {[
+                    {
+                      label: "Patients",
+                      value: patients.length,
+                      color: "#1685c5",
+                    },
+                    {
+                      label: "Appointments",
+                      value: appointments.length,
+                      color: "#8b7bea",
+                    },
+                    {
+                      label: "Invoices",
+                      value: invoices.length,
+                      color: "#19a58a",
+                    },
+                  ].map((item) => {
+                    const maximum = Math.max(
+                      patients.length,
+                      appointments.length,
+                      invoices.length,
+                      1,
+                    );
+
+                    return (
+                      <div className="dashboard-activity-item" key={item.label}>
+                        <div className="dashboard-activity-label">
+                          <span>
+                            <i style={{ background: item.color }} />
+                            {item.label}
+                          </span>
+                          <strong>
+                            {loading && item.label === "Patients"
+                              ? "—"
+                              : item.label === "Appointments" && appointmentsLoading
+                                ? "—"
+                                : item.label === "Invoices" && invoicesLoading
+                                  ? "—"
+                                  : item.value}
+                          </strong>
+                        </div>
+                        <div className="dashboard-activity-track">
+                          <div
+                            style={{
+                              width: `${(item.value / maximum) * 100}%`,
+                              background: item.color,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="dashboard-insights-note">
+                    <span className="dashboard-note-mark">i</span>
+                    <p>
+                      Counts reflect records returned by the connected API.
+                      Bar lengths compare record counts; they do not indicate
+                      performance or clinical outcomes.
+                    </p>
+                  </div>
+                </div>
+              </section>
+<div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "22px", boxShadow: "0 2px 8px rgba(15,23,42,0.03)" }}>
+                <h2 style={{ color: "#0f172a", fontSize: "17px", fontWeight: 700, margin: "0 0 5px" }}>Quick Actions</h2>
+                <p style={{ color: "#64748b", fontSize: "13px", margin: "0 0 18px" }}>Open a clinic module to continue your work.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                  <button type="button" onClick={() => router.push("/patients")} style={{ padding: "14px 16px", border: "1px solid #bae6fd", borderRadius: "10px", background: "#f0f9ff", color: "#0369a1", fontWeight: 650, textAlign: "left", cursor: "pointer" }}>
+                    Patient Directory <span style={{ display: "block", fontSize: "12px", fontWeight: 400, marginTop: "5px" }}>View and manage patient records</span>
+                  </button>
+                  <button type="button" onClick={() => router.push("/appointments")} style={{ padding: "14px 16px", border: "1px solid #c7d2fe", borderRadius: "10px", background: "#eef2ff", color: "#4338ca", fontWeight: 650, textAlign: "left", cursor: "pointer" }}>
+                    Appointments <span style={{ display: "block", fontSize: "12px", fontWeight: 400, marginTop: "5px" }}>Review bookings and statuses</span>
+                  </button>
+                  <button type="button" onClick={() => router.push("/billing")} style={{ padding: "14px 16px", border: "1px solid #bbf7d0", borderRadius: "10px", background: "#f0fdf4", color: "#15803d", fontWeight: 650, textAlign: "left", cursor: "pointer" }}>
+                    Billing & Invoices <span style={{ display: "block", fontSize: "12px", fontWeight: 400, marginTop: "5px" }}>Manage invoices and payments</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
           <section className="stats-grid">
             <article className="stat-card">
               <div className="stat-top">
@@ -670,7 +1107,7 @@ export default function Home() {
                   </svg>
                 </span>
               </div>
-              <div className="stat-number">{loading ? "—" : patients.length}</div>
+              <div className="stat-number">{loading ? "â€”" : patients.length}</div>
               <div className="stat-caption">Registered clinical profiles</div>
             </article>
 
@@ -703,7 +1140,7 @@ export default function Home() {
               </div>
               <div className="stat-number">
                 {loading
-                  ? "—"
+                  ? "â€”"
                   : patients.filter((patient) => patient.gender === "Male")
                       .length}
               </div>
@@ -739,7 +1176,7 @@ export default function Home() {
               </div>
               <div className="stat-number">
                 {loading
-                  ? "—"
+                  ? "â€”"
                   : patients.filter((patient) => patient.gender === "Female")
                       .length}
               </div>
@@ -774,7 +1211,7 @@ export default function Home() {
               </div>
               <div className="stat-number">
                 {loading
-                  ? "—"
+                  ? "â€”"
                   : patients.filter((patient) => patient.gender === "Other")
                       .length}
               </div>
@@ -784,7 +1221,9 @@ export default function Home() {
             </article>
           </section>
 
-          <section
+          {/* ROUTE_GUARD_/patients */}
+{pathname === "/patients" && (
+<section
             className="records-card"
             id="patient-records"
             style={{
@@ -853,6 +1292,119 @@ export default function Home() {
               onPageChange={setCurrentPage}
             />
           </section>
+)}
+
+          {/* ROUTE_GUARD_/appointments */}
+{pathname === "/appointments" && (
+<section
+            id="appointments-section"
+            className="records-card"
+            style={{
+              marginTop: 24,
+              padding: 22,
+              background: "#ffffff",
+              borderRadius: 12,
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ margin: "0 0 5px", fontSize: 20, color: "#0f172a" }}>
+                Appointment Management
+              </h2>
+              <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+                Schedule appointments and manage their status.
+              </p>
+            </div>
+
+            <AppointmentForm
+              patients={patients}
+              doctors={doctors}
+              saving={appointmentSaving}
+              error={appointmentError}
+              onSubmit={saveAppointment}
+            />
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", margin: "18px 0" }}>
+              <h3 style={{ margin: 0, color: "#0f172a", fontSize: 16 }}>
+                Appointments ({visibleAppointments.length})
+              </h3>
+              <AppointmentFilters
+                status={appointmentStatus}
+                onChange={setAppointmentStatus}
+              />
+            </div>
+
+            {appointmentError && (
+              <p role="alert" style={{ color: "#b91c1c", fontSize: 13 }}>
+                {appointmentError}
+              </p>
+            )}
+
+            <AppointmentList
+              appointments={visibleAppointments}
+              loading={appointmentsLoading}
+              onStatusChange={(id, status) => void changeAppointmentStatus(id, status)}
+              updatingId={updatingAppointmentId}
+            />
+          </section>
+)}
+          {/* ROUTE_GUARD_/billing */}
+{pathname === "/billing" && (
+<section id="billing-section" className="records-card billing-page-section">
+            <div className="billing-page-heading">
+              <h2>Billing Management</h2>
+              <p>Create invoices, track balances, and record payments.</p>
+            </div>
+
+            <BillingSummary invoices={invoices} loading={invoicesLoading} />
+
+            <InvoiceForm
+              patients={patients}
+              appointments={appointments}
+              saving={invoiceSaving}
+              error={invoiceError}
+              onSubmit={saveInvoice}
+            />
+
+            <InvoiceList
+              invoices={invoices}
+              patients={patients}
+              loading={invoicesLoading}
+              status={invoiceStatus}
+              onStatusChange={setInvoiceStatus}
+              onSelectInvoice={(invoice) => void openInvoiceDetails(invoice)}
+            />
+
+            <InvoiceDetails
+              invoice={selectedInvoice}
+              loading={invoiceDetailsLoading}
+              error={invoiceDetailsError}
+              onClose={() => {
+                setSelectedInvoice(null);
+                setShowPaymentForm(false);
+                setPaymentError("");
+              }}
+              onRecordPayment={() => {
+                setPaymentError("");
+                setShowPaymentForm(true);
+              }}
+            />
+
+            {showPaymentForm && selectedInvoice && (
+              <PaymentForm
+                invoice={selectedInvoice}
+                saving={paymentSaving}
+                error={paymentError}
+                onSubmit={saveInvoicePayment}
+                onCancel={() => {
+                  setShowPaymentForm(false);
+                  setPaymentError("");
+                }}
+              />
+            )}
+          </section>
+)}
         </section>
       </main>
 
@@ -880,3 +1432,9 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
+

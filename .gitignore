@@ -24,3 +24,16 @@ venv/
 # IDE settings
 .vscode/
 .idea/
+
+# Temporary backups
+*.bak
+*.backup
+*.before-*
+*.billing-backup
+*.appointments-backup
+*.billing-layout-backup
+*.pre-route-fix
+frontend/backups/
+
+# Large demo video
+Patient management system.mp4

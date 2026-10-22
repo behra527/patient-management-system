@@ -1,14 +1,18 @@
-
+﻿
 "use client";
 
 import Link from "next/link";
 
 type AppSidebarProps = {
   onNavigateToPatients: () => void;
+  onNavigateToAppointments: () => void;
+  onNavigateToBilling: () => void;
 };
 
 export default function AppSidebar({
   onNavigateToPatients,
+  onNavigateToAppointments,
+  onNavigateToBilling,
 }: AppSidebarProps) {
   return (
     <aside className="sidebar">
@@ -116,6 +120,18 @@ export default function AppSidebar({
           </svg>
           Patient Directory
         </button>
+        <button type="button" className="nav-item" onClick={onNavigateToAppointments}>
+          Appointments
+        </button>
+        <button type="button" className="nav-item" onClick={onNavigateToBilling}>
+          Billing Management
+        </button>
+        <Link href="/doctors" className="nav-item">
+          Doctors Management
+        </Link>
+        <Link href="/vitals" className="nav-item">
+          Patient Vitals
+        </Link>
       </nav>
 
       <div className="sidebar-bottom">
@@ -211,3 +227,6 @@ export default function AppSidebar({
     </aside>
   );
 }
+
+
+

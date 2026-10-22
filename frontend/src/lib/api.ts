@@ -229,3 +229,253 @@ export function deletePatient(
     method: "DELETE",
   });
 }
+
+// Appointment API
+export type AppointmentStatus = "Scheduled" | "Completed" | "Cancelled";
+
+export type Appointment = {
+  id: number;
+  patient_id: number;
+  doctor_id: number;
+  appointment_date: string;
+  appointment_time: string;
+  duration_minutes: number;
+  reason: string;
+  status: AppointmentStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AppointmentPayload = {
+  patient_id: number;
+  doctor_id: number;
+  appointment_date: string;
+  appointment_time: string;
+  duration_minutes: number;
+  reason: string;
+};
+
+export type DoctorStatus = "Active" | "Inactive" | "On Leave";
+
+export type Doctor = {
+  id: number;
+  full_name: string;
+  specialty: string;
+  email: string;
+  phone: string | null;
+  license_number: string;
+  status: DoctorStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DoctorPayload = {
+  full_name: string;
+  specialty: string;
+  email: string;
+  phone: string | null;
+  license_number: string;
+  status: DoctorStatus;
+};
+
+export function getAppointments(
+  filters: { status?: AppointmentStatus } = {},
+): Promise<Appointment[]> {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  const query = params.toString();
+  return request<Appointment[]>(`/appointments/${query ? `?${query}` : ""}`);
+}
+
+export function createAppointment(
+  payload: AppointmentPayload,
+): Promise<Appointment> {
+  return request<Appointment>("/appointments/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAppointmentStatus(
+  appointmentId: number,
+  status: AppointmentStatus,
+): Promise<Appointment> {
+  return request<Appointment>(`/appointments/${appointmentId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function getDoctors(): Promise<Doctor[]> {
+  return request<Doctor[]>("/doctors/");
+}
+
+// Billing API
+export type InvoiceStatus = "Unpaid" | "Partially Paid" | "Paid";
+
+export type PaymentMethod =
+  | "Cash"
+  | "Card"
+  | "Bank Transfer"
+  | "Online";
+
+export type Invoice = {
+  id: number;
+  invoice_number: string;
+  patient_id: number;
+  appointment_id: number | null;
+  description: string;
+  total_amount_paisa: number;
+  amount_paid_paisa: number;
+  balance_due_paisa: number;
+  due_date: string;
+  status: InvoiceStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Payment = {
+  id: number;
+  invoice_id: number;
+  amount_paisa: number;
+  payment_method: PaymentMethod;
+  reference: string | null;
+  paid_at: string;
+};
+
+export type InvoiceDetail = Invoice & {
+  payments: Payment[];
+};
+
+export type InvoicePayload = {
+  invoice_number: string;
+  patient_id: number;
+  appointment_id: number | null;
+  description: string;
+  total_amount_paisa: number;
+  due_date: string;
+};
+
+export type PaymentPayload = {
+  amount_paisa: number;
+  payment_method: PaymentMethod;
+  reference: string | null;
+};
+
+export function getInvoices(
+  filters: { patient_id?: number; status?: InvoiceStatus } = {},
+): Promise<Invoice[]> {
+  const params = new URLSearchParams();
+
+  if (filters.patient_id) {
+    params.set("patient_id", String(filters.patient_id));
+  }
+
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+
+  const query = params.toString();
+
+  return request<Invoice[]>(
+    `/billing/invoices${query ? `?${query}` : ""}`,
+  );
+}
+
+export function createInvoice(
+  payload: InvoicePayload,
+): Promise<Invoice> {
+  return request<Invoice>("/billing/invoices", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getInvoiceDetails(
+  invoiceId: number,
+): Promise<InvoiceDetail> {
+  return request<InvoiceDetail>(`/billing/invoices/${invoiceId}`);
+}
+
+export function recordInvoicePayment(
+  invoiceId: number,
+  payload: PaymentPayload,
+): Promise<Payment> {
+  return request<Payment>(`/billing/invoices/${invoiceId}/payments`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// Doctor management API
+export function createDoctor(payload: DoctorPayload): Promise<Doctor> {
+  return request<Doctor>("/doctors/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateDoctor(
+  doctorId: number,
+  payload: DoctorPayload,
+): Promise<Doctor> {
+  return request<Doctor>(`/doctors/${doctorId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deactivateDoctor(doctorId: number): Promise<Doctor> {
+  return request<Doctor>(`/doctors/${doctorId}/deactivate`, {
+    method: "PATCH",
+  });
+}
+
+// Vitals / health metrics API
+export type VitalsPayload = {
+  patient_id: string;
+  age: number;
+  blood_pressure: {
+    systolic: number;
+    diastolic: number;
+  };
+  glucose_level: number;
+};
+
+export type VitalsRecord = VitalsPayload & {
+  id: number;
+  recorded_at: string;
+};
+
+export type VitalsSummary = {
+  patient_id: string;
+  average_systolic: number;
+  average_diastolic: number;
+  average_glucose_level: number;
+  total_records: number;
+};
+
+export function createVitals(payload: VitalsPayload): Promise<VitalsRecord> {
+  return request<VitalsRecord>("/vitals", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPatientVitals(
+  patientId: string,
+): Promise<VitalsRecord[]> {
+  return request<VitalsRecord[]>(
+    `/patients/${encodeURIComponent(patientId)}/vitals`,
+  );
+}
+
+export function getPatientVitalsSummary(
+  patientId: string,
+): Promise<VitalsSummary> {
+  return request<VitalsSummary>(
+    `/patients/${encodeURIComponent(patientId)}/summary`,
+  );
+}
+
+
